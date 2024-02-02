@@ -51,11 +51,13 @@ func (d Debug9) Execute() (map[string]string, error) {
 	var host = "*"
 	var iPv6CheckPath string
 	if d.CustomIPv6CheckPath != "" {
+		d.Logger.Infof("weird should not have been set, %s", d.CustomIPv6CheckPath)
 		iPv6CheckPath = d.CustomIPv6CheckPath
 	} else {
+		d.Logger.Infof("cool, setting it to default, %s", DefaultIPv6CheckPath)
 		iPv6CheckPath = DefaultIPv6CheckPath
 	}
-	if !IPv6Enabled(iPv6CheckPath) {
+	if !IPv6Enabled(iPv6CheckPath, d.Logger) {
 		d.Logger.Infof("IPv6 does not seem to be enabled in the container, configuring debug agent with 0.0.0.0\n")
 		host = "0.0.0.0"
 	}
@@ -81,10 +83,14 @@ func (d Debug9) Execute() (map[string]string, error) {
 	return map[string]string{"JAVA_TOOL_OPTIONS": opts}, nil
 }
 
-func IPv6Enabled(iPv6CheckPath string) bool {
+func IPv6Enabled(iPv6CheckPath string, logger bard.Logger) bool {
+
+	logger.Info("entering")
+
 	in, err := os.Open(iPv6CheckPath)
 
 	if err != nil {
+		logger.Infof("open: there was an error %s", err.Error())
 		return false
 	}
 	defer func(in *os.File) {
@@ -92,11 +98,16 @@ func IPv6Enabled(iPv6CheckPath string) bool {
 	}(in)
 
 	b, err := io.ReadAll(in)
+	if err != nil {
+		logger.Infof("readall, there was an error %s", err.Error())
+	}
 	value := string(b[0:1])
-
+	logger.Infof("value is %s", value)
 	if err != nil || value == "1" {
+		logger.Infof("not enabled, exting false")
 		return false
 	} else {
+		logger.Infof("enabled, exting true")
 		return true
 	}
 }
